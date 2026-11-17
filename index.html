@@ -1,0 +1,3912 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>캠퍼스 마감 플래너</title>
+    <meta
+      name="description"
+      content="6~7개 수강 과목의 과제와 일정을 마감일순으로 자동 정렬하고 D-day와 D-3 긴급 마감을 한눈에 관리하는 대학생용 웹앱"
+    />
+    <meta property="og:title" content="캠퍼스 마감 플래너" />
+    <meta
+      property="og:description"
+      content="6~7개 수강 과목의 과제와 일정을 마감일순으로 자동 정렬하고 D-day와 D-3 긴급 마감을 한눈에 관리하는 대학생용 웹앱"
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-canvas: #f6f7f9;
+        --bg-surface: #ffffff;
+        --bg-subtle: #edf0f4;
+        --bg-hover: #f8fafc;
+        --bg-urgent: #fef2f2;
+        --border-hairline: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --border-urgent: #fca5a5;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --accent: #1d4ed8;
+        --accent-hover: #1e40af;
+        --accent-soft: #eff6ff;
+        --danger: #dc2626;
+        --danger-hover: #b91c1c;
+        --warning: #b45309;
+        --success: #15803d;
+        --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-elevated: 0 12px 32px rgba(15, 23, 42, 0.14);
+        --radius-panel: 16px;
+        --radius-control: 10px;
+        --radius-sm: 8px;
+        --font-sans: 'Plus Jakarta Sans', 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+
+      button {
+        cursor: pointer;
+        background: none;
+        border: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Top Header */
+      .app-header {
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-hairline);
+        position: sticky;
+        top: 0;
+        z-index: 30;
+      }
+
+      .header-inner {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 54px;
+      }
+
+      .brand-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .header-nav {
+        display: none;
+        align-items: center;
+        gap: 28px;
+      }
+
+      .header-nav-link {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        padding: 6px 2px;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+      }
+
+      .header-nav-link:hover {
+        color: var(--text-primary);
+      }
+
+      .header-nav-link.is-active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        font-weight: 600;
+      }
+
+      .header-cta {
+        min-height: 40px;
+        padding: 8px 16px;
+        border-radius: var(--radius-control);
+        background-color: var(--accent);
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+      }
+
+      .header-cta:hover {
+        background-color: var(--accent-hover);
+      }
+
+      .header-cta:active {
+        transform: scale(0.98);
+      }
+
+      /* Main Workspace */
+      .app-main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 20px 16px 56px;
+      }
+
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+
+      /* Left Composer Panel */
+      .composer-backdrop {
+        display: none;
+      }
+
+      .composer-panel {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-panel);
+        padding: 20px;
+        box-shadow: var(--shadow-card);
+      }
+
+      .composer-drag-handle {
+        display: none;
+      }
+
+      .composer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .composer-title {
+        margin: 0;
+        font-size: 1.0625rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+
+      .composer-close-btn {
+        display: none;
+        min-width: 44px;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+      }
+
+      .composer-close-btn:hover {
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+      }
+
+      .form-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .field-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .field-input {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        font-size: 0.9375rem;
+        transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+      }
+
+      .field-input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .field-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+      }
+
+      .quick-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 2px;
+      }
+
+      .quick-btn {
+        min-height: 32px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out);
+      }
+
+      .quick-btn:hover {
+        background-color: #e2e8f0;
+        color: var(--text-primary);
+      }
+
+      /* Segmented Priority Picker */
+      .priority-segment {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 4px;
+        background-color: var(--bg-subtle);
+        border-radius: var(--radius-control);
+      }
+
+      .priority-btn {
+        min-height: 40px;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+      }
+
+      .priority-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .priority-btn[aria-pressed='true'][data-value='상'] {
+        background-color: var(--bg-surface);
+        color: var(--danger);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .priority-btn[aria-pressed='true'][data-value='중'] {
+        background-color: var(--bg-surface);
+        color: var(--warning);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .priority-btn[aria-pressed='true'][data-value='하'] {
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .form-error {
+        margin: 0;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--danger);
+        min-height: 1.25em;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-submit {
+        flex: 1;
+        min-height: 44px;
+        padding: 10px 18px;
+        border-radius: var(--radius-control);
+        background-color: var(--accent);
+        color: #ffffff;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: background-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+      }
+
+      .btn-submit:hover {
+        background-color: var(--accent-hover);
+      }
+
+      .btn-submit:active {
+        transform: scale(0.985);
+      }
+
+      .btn-cancel-edit {
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-surface);
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .btn-cancel-edit:hover {
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+      }
+
+      /* Right Board Column */
+      .board-column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .overview-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .overview-heading {
+        margin: 0;
+        font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.25;
+        text-wrap: balance;
+      }
+
+      .overview-sub {
+        margin: 4px 0 0;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+      }
+
+      .summary-metrics {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .metric-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .metric-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-muted);
+      }
+
+      .metric-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--text-primary);
+      }
+
+      .metric-value.is-danger {
+        color: var(--danger);
+      }
+
+      /* Filter Toolbar */
+      .toolbar {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .toolbar-top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .status-tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        background-color: var(--bg-subtle);
+        border-radius: var(--radius-control);
+      }
+
+      .status-tab {
+        min-height: 38px;
+        padding: 6px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+      }
+
+      .status-tab:hover {
+        color: var(--text-primary);
+      }
+
+      .status-tab.is-active {
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .search-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 200px;
+        max-width: 320px;
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+
+      .search-input {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 12px 8px 36px;
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-surface);
+        font-size: 0.875rem;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      /* Course Filter Row */
+      .course-filter-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+      }
+
+      .course-filter-row::-webkit-scrollbar {
+        display: none;
+      }
+
+      .course-tab {
+        min-height: 36px;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-surface);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+      }
+
+      .course-tab:hover {
+        border-color: var(--border-strong);
+      }
+
+      .course-tab.is-active {
+        background-color: var(--course-ink, var(--text-primary));
+        border-color: var(--course-ink, var(--text-primary));
+        color: #ffffff !important;
+      }
+
+      /* Weekly Calendar Section */
+      .weekly-calendar-section {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-panel);
+        padding: 16px;
+        box-shadow: var(--shadow-card);
+      }
+
+      .weekly-calendar-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .weekly-calendar-title-wrap {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .weekly-calendar-title {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .weekly-calendar-range {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+
+      .day-filter-reset {
+        min-height: 32px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .day-filter-reset:hover {
+        background-color: #e2e8f0;
+        color: var(--text-primary);
+      }
+
+      /* Mobile-first vertical day rows -> Desktop 7-column calendar */
+      .weekly-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .week-day-cell {
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-hover);
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+      }
+
+      .week-day-cell.is-today {
+        background-color: var(--accent-soft);
+        border-color: #93c5fd;
+      }
+
+      .week-day-cell.is-selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+
+      .week-day-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        min-height: 28px;
+        padding: 0;
+        text-align: left;
+      }
+
+      .week-day-label {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      .week-day-cell.is-today .week-day-label {
+        color: var(--accent);
+      }
+
+      .week-day-count {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      .week-day-events {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .week-day-empty {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .week-event-btn {
+        width: 100%;
+        min-height: 36px;
+        padding: 6px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--course-border, var(--border-hairline));
+        background-color: var(--course-soft, var(--bg-surface));
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        transition: opacity 150ms var(--ease-out), transform 120ms var(--ease-out);
+      }
+
+      .week-event-btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .week-event-btn.is-completed {
+        opacity: 0.45;
+      }
+
+      .week-event-course {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--course-ink, var(--text-secondary));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .week-event-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .week-event-btn.is-completed .week-event-title {
+        text-decoration: line-through;
+      }
+
+      /* Card Grid */
+      .cards-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .task-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-panel);
+        padding: 16px 18px;
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: opacity 200ms var(--ease-out), transform 180ms var(--ease-out), border-color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+      }
+
+      .task-card:hover {
+        border-color: var(--border-strong);
+      }
+
+      /* D-3 이내 긴급 스타일 (no thick border-l-4) */
+      .task-card.is-urgent {
+        background-color: var(--bg-urgent);
+        border-color: var(--border-urgent);
+      }
+
+      .task-card.is-urgent:hover {
+        border-color: #f87171;
+      }
+
+      /* 완료 체크 시 흐리게 */
+      .task-card.is-completed {
+        opacity: 0.46;
+        background-color: var(--bg-hover);
+        border-color: var(--border-hairline);
+      }
+
+      .task-card.is-completed:hover {
+        opacity: 0.72;
+      }
+
+      .card-top-meta {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      /* Unboxed text metadata with typographic separator */
+      .card-kicker {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        min-width: 0;
+      }
+
+      .card-course {
+        font-weight: 700;
+        color: var(--course-ink, var(--text-primary));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 190px;
+      }
+
+      .card-priority {
+        font-weight: 600;
+      }
+
+      .card-priority[data-priority='상'] {
+        color: var(--danger);
+      }
+
+      .card-priority[data-priority='중'] {
+        color: var(--warning);
+      }
+
+      .card-priority[data-priority='하'] {
+        color: var(--text-muted);
+      }
+
+      .card-dday {
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .card-dday.is-urgent {
+        color: var(--danger);
+      }
+
+      .card-dday.is-completed {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .card-main {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .check-btn {
+        min-width: 44px;
+        min-height: 44px;
+        margin: -10px 0 -10px -10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-control);
+        flex-shrink: 0;
+      }
+
+      .check-box {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        border: 1.75px solid var(--border-strong);
+        background-color: var(--bg-surface);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+      }
+
+      .check-btn:hover .check-box {
+        border-color: var(--accent);
+      }
+
+      .task-card.is-completed .check-box {
+        background-color: var(--text-secondary);
+        border-color: var(--text-secondary);
+      }
+
+      .card-title-wrap {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 1.03125rem;
+        font-weight: 600;
+        line-height: 1.4;
+        color: var(--text-primary);
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+
+      .task-card.is-completed .card-title {
+        text-decoration: line-through;
+        color: var(--text-secondary);
+      }
+
+      /* Group Role Table inside Card (hairline rows, zero nested boxes) */
+      .card-team-section {
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .task-card.is-urgent .card-team-section {
+        border-top-color: rgba(220, 38, 38, 0.14);
+      }
+
+      .card-team-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+      }
+
+      .card-team-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .card-team-row {
+        display: grid;
+        grid-template-columns: minmax(64px, auto) 1fr;
+        gap: 10px;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+      }
+
+      .card-team-member {
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      .card-team-role {
+        color: var(--text-secondary);
+        word-break: keep-all;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
+      }
+
+      .task-card.is-urgent .card-footer {
+        border-top-color: rgba(220, 38, 38, 0.14);
+      }
+
+      .card-due-text {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+
+      .task-card.is-urgent .card-due-text {
+        color: #991b1b;
+        font-weight: 500;
+      }
+
+      .card-actions {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-right: -8px;
+      }
+
+      .icon-action-btn {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0 10px;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out);
+      }
+
+      .icon-action-btn:hover {
+        background-color: rgba(15, 23, 42, 0.06);
+        color: var(--text-primary);
+      }
+
+      .icon-action-btn.is-delete:hover {
+        background-color: rgba(220, 38, 38, 0.1);
+        color: var(--danger);
+      }
+
+      /* Completed Divider Label */
+      .section-divider {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 2px 2px;
+        border-top: 1px solid var(--border-hairline);
+        margin-top: 4px;
+      }
+
+      .section-divider-title {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .clear-completed-btn {
+        min-height: 36px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .clear-completed-btn:hover {
+        background-color: var(--bg-subtle);
+        color: var(--danger);
+      }
+
+      /* Empty State */
+      .empty-state {
+        background-color: var(--bg-surface);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-panel);
+        padding: 40px 20px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .empty-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .empty-desc {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        max-width: 360px;
+      }
+
+      /* Confirmation Dialog Modal */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        background-color: rgba(15, 23, 42, 0.48);
+        backdrop-filter: blur(2px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms var(--ease-out);
+      }
+
+      .modal-backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .modal-dialog {
+        width: 100%;
+        max-width: 400px;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: var(--shadow-elevated);
+        transform: scale(0.96);
+        transition: transform 180ms var(--ease-out);
+      }
+
+      .modal-backdrop.is-open .modal-dialog {
+        transform: scale(1);
+      }
+
+      .modal-title {
+        margin: 0 0 8px;
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .modal-desc {
+        margin: 0 0 20px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.55;
+        word-break: keep-all;
+      }
+
+      .modal-target-name {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .modal-btn-cancel {
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-surface);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .modal-btn-cancel:hover {
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+      }
+
+      .modal-btn-danger {
+        min-height: 44px;
+        padding: 10px 18px;
+        border-radius: var(--radius-control);
+        background-color: var(--danger);
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .modal-btn-danger:hover {
+        background-color: var(--danger-hover);
+      }
+
+      /* Toolbar Actions & Syllabus/Export Buttons */
+      .toolbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .syllabus-trigger-btn {
+        min-height: 40px;
+        padding: 8px 14px;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+      }
+
+      .syllabus-trigger-btn:hover {
+        background-color: var(--bg-subtle);
+        border-color: var(--text-muted);
+      }
+
+      /* Group Task Type Toggle & Role Division Form */
+      .type-segment {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        padding: 4px;
+        background-color: var(--bg-subtle);
+        border-radius: var(--radius-control);
+      }
+
+      .type-btn {
+        min-height: 40px;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+      }
+
+      .type-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .type-btn[aria-pressed='true'] {
+        background-color: var(--bg-surface);
+        color: var(--accent);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .team-section {
+        border-top: 1px solid var(--border-hairline);
+        padding-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .team-section[hidden] {
+        display: none;
+      }
+
+      .team-section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .team-add-btn {
+        min-height: 32px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        background-color: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .team-add-btn:hover {
+        background-color: #dbeafe;
+      }
+
+      .team-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .team-row {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr) auto;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .team-input {
+        width: 100%;
+        min-height: 40px;
+        padding: 6px 10px;
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-surface);
+        font-size: 0.8125rem;
+        color: var(--text-primary);
+      }
+
+      .team-input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .team-remove-btn {
+        min-width: 36px;
+        min-height: 40px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .team-remove-btn:hover {
+        background-color: rgba(220, 38, 38, 0.1);
+        color: var(--danger);
+      }
+
+      .syllabus-dialog {
+        width: 100%;
+        max-width: 680px;
+        max-height: 90dvh;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 20px;
+        box-shadow: var(--shadow-elevated);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transform: scale(0.97);
+        transition: transform 180ms var(--ease-out);
+      }
+
+      .modal-backdrop.is-open .syllabus-dialog {
+        transform: scale(1);
+      }
+
+      .syllabus-dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 22px 14px;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .syllabus-dialog-title {
+        margin: 0;
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .syllabus-dialog-close {
+        min-width: 44px;
+        min-height: 44px;
+        margin: -8px -10px -8px 0;
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .syllabus-dialog-close:hover {
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+      }
+
+      .syllabus-dialog-body {
+        padding: 18px 22px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .syllabus-helper-text {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      .syllabus-file-zone {
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-hover);
+        padding: 12px 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+      }
+
+      .syllabus-file-zone.is-dragover {
+        border-color: var(--accent);
+        background-color: var(--accent-soft);
+      }
+
+      .syllabus-file-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .syllabus-file-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .syllabus-file-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .syllabus-file-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .syllabus-file-btn {
+        min-height: 40px;
+        padding: 8px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .syllabus-file-btn:hover {
+        background-color: var(--bg-subtle);
+      }
+
+      .syllabus-attached-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px solid #bfdbfe;
+        border-radius: var(--radius-control);
+        background-color: var(--accent-soft);
+      }
+
+      .syllabus-attached-bar[hidden] {
+        display: none;
+      }
+
+      .syllabus-attached-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        font-size: 0.8125rem;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .syllabus-attached-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .syllabus-attached-size {
+        color: var(--text-secondary);
+        font-weight: 500;
+        flex-shrink: 0;
+      }
+
+      .syllabus-textarea {
+        width: 100%;
+        min-height: 168px;
+        padding: 12px 14px;
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-hover);
+        color: var(--text-primary);
+        font: inherit;
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        resize: vertical;
+        transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+      }
+
+      .syllabus-textarea:focus {
+        outline: none;
+        background-color: var(--bg-surface);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+      }
+
+      .syllabus-input-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 10px;
+      }
+
+      .syllabus-course-wrap {
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .syllabus-analyze-btn {
+        min-height: 44px;
+        padding: 10px 20px;
+        border-radius: var(--radius-control);
+        background-color: var(--accent);
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 150ms var(--ease-out), opacity 150ms var(--ease-out);
+      }
+
+      .syllabus-analyze-btn:hover:not(:disabled) {
+        background-color: var(--accent-hover);
+      }
+
+      .syllabus-analyze-btn:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+
+      .syllabus-preview-section {
+        border-top: 1px solid var(--border-hairline);
+        padding-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .syllabus-preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .syllabus-preview-title {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .syllabus-preview-sub {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+
+      .syllabus-preview-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .syllabus-item-row {
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-control);
+        background-color: var(--bg-hover);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .syllabus-item-check {
+        width: 20px;
+        height: 20px;
+        margin-top: 10px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .syllabus-item-fields {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      @media (min-width: 600px) {
+        .syllabus-item-fields {
+          grid-template-columns: 130px minmax(0, 1fr) 142px 76px;
+        }
+      }
+
+      .syllabus-mini-input,
+      .syllabus-mini-select {
+        width: 100%;
+        min-height: 40px;
+        padding: 6px 10px;
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-surface);
+        font-size: 0.8125rem;
+        color: var(--text-primary);
+      }
+
+      .syllabus-mini-input:focus,
+      .syllabus-mini-select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .syllabus-dialog-foot {
+        padding: 14px 22px;
+        border-top: 1px solid var(--border-hairline);
+        background-color: var(--bg-hover);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .syllabus-import-btn {
+        min-height: 44px;
+        padding: 10px 20px;
+        border-radius: var(--radius-control);
+        background-color: var(--accent);
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .syllabus-import-btn:hover:not(:disabled) {
+        background-color: var(--accent-hover);
+      }
+
+      .syllabus-import-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Undo Toast */
+      .toast-region {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(16px);
+        z-index: 60;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+      }
+
+      .toast-region.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .toast-box {
+        background-color: var(--text-primary);
+        color: #ffffff;
+        padding: 10px 14px 10px 16px;
+        border-radius: var(--radius-control);
+        box-shadow: var(--shadow-elevated);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 0.875rem;
+        white-space: nowrap;
+      }
+
+      .toast-undo-btn {
+        min-height: 36px;
+        padding: 4px 10px;
+        border-radius: var(--radius-sm);
+        background-color: rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+        font-size: 0.8125rem;
+        font-weight: 600;
+      }
+
+      .toast-undo-btn:hover {
+        background-color: rgba(255, 255, 255, 0.24);
+      }
+
+      /* Tablet & Desktop Breakpoints */
+      @media (min-width: 768px) {
+        .header-nav {
+          display: flex;
+        }
+
+        .weekly-grid {
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .week-day-cell {
+          min-height: 132px;
+          padding: 10px 8px;
+        }
+
+        .cards-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .header-inner {
+          padding: 12px 24px;
+        }
+
+        .app-main {
+          padding: 26px 24px 64px;
+        }
+
+        .workspace-grid {
+          grid-template-columns: 340px minmax(0, 1fr);
+          gap: 28px;
+        }
+
+        .composer-panel {
+          position: sticky;
+          top: 80px;
+        }
+      }
+
+      /* Mobile Bottom Sheet for Composer */
+      @media (max-width: 1023px) {
+        .composer-backdrop {
+          display: block;
+          position: fixed;
+          inset: 0;
+          background-color: rgba(15, 23, 42, 0.45);
+          backdrop-filter: blur(2px);
+          z-index: 45;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 200ms var(--ease-out);
+        }
+
+        .composer-backdrop.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .composer-panel {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 50;
+          border-radius: 24px 24px 0 0;
+          border-bottom: none;
+          max-height: 88dvh;
+          overflow-y: auto;
+          padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+          box-shadow: 0 -10px 32px rgba(15, 23, 42, 0.16);
+          transform: translateY(105%);
+          transition: transform 240ms var(--ease-out);
+        }
+
+        .composer-panel.is-open {
+          transform: translateY(0);
+        }
+
+        .composer-drag-handle {
+          display: block;
+          width: 40px;
+          height: 5px;
+          border-radius: 999px;
+          background-color: var(--border-strong);
+          margin: 4px auto 12px;
+        }
+
+        .composer-close-btn {
+          display: inline-flex;
+        }
+
+        .search-wrap {
+          max-width: none;
+        }
+
+        .check-btn,
+        .icon-action-btn {
+          min-width: 44px;
+          min-height: 44px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar (3-zone contract) -->
+    <header class="app-header">
+      <div class="header-inner">
+        <span class="brand-title">캠퍼스 마감 플래너</span>
+
+        <nav class="header-nav" aria-label="보기 전환">
+          <button type="button" class="header-nav-link is-active" data-nav-tab="week">이번주</button>
+          <button type="button" class="header-nav-link" data-nav-tab="all">전체</button>
+          <button type="button" class="header-nav-link" data-nav-tab="completed">완료</button>
+        </nav>
+
+        <button type="button" id="openComposerBtn" class="header-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          <span>과제 추가</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="workspace-grid">
+        <!-- Mobile Backdrop -->
+        <div id="composerBackdrop" class="composer-backdrop" aria-hidden="true"></div>
+
+        <!-- Left Sidebar / Mobile Bottom Sheet: Task Input Form -->
+        <aside id="composerPanel" class="composer-panel" aria-labelledby="composerTitle">
+          <div class="composer-drag-handle" aria-hidden="true"></div>
+          <div class="composer-header">
+            <h2 id="composerTitle" class="composer-title">새 과제 · 일정 등록</h2>
+            <button type="button" id="closeComposerBtn" class="composer-close-btn" aria-label="입력 창 닫기">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form id="taskForm" class="form-stack" novalidate>
+            <input type="hidden" id="editingTaskId" value="" />
+
+            <div class="field-group">
+              <label for="courseInput" class="field-label">과목명</label>
+              <input
+                type="text"
+                id="courseInput"
+                class="field-input"
+                placeholder="예: 운영체제, 데이터베이스"
+                maxlength="40"
+                autocomplete="off"
+                required
+              />
+              <div id="courseQuickRow" class="quick-row" aria-label="최근 과목 빠른 선택"></div>
+            </div>
+
+            <div class="field-group">
+              <label for="titleInput" class="field-label">과제명 · 일정</label>
+              <input
+                type="text"
+                id="titleInput"
+                class="field-input"
+                placeholder="예: 3주차 스케줄링 알고리즘 보고서"
+                maxlength="80"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="dueDateInput" class="field-label">마감일</label>
+              <input type="date" id="dueDateInput" class="field-input tabular-nums" required />
+              <div class="quick-row" aria-label="마감일 빠른 지정">
+                <button type="button" class="quick-btn" data-offset-days="0">오늘</button>
+                <button type="button" class="quick-btn" data-offset-days="1">내일</button>
+                <button type="button" class="quick-btn" data-offset-days="3">+3일</button>
+                <button type="button" class="quick-btn" data-offset-days="7">+1주</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <span class="field-label">중요도</span>
+              <div class="priority-segment" role="group" aria-label="중요도 선택">
+                <button type="button" class="priority-btn" data-value="상" aria-pressed="false">상</button>
+                <button type="button" class="priority-btn" data-value="중" aria-pressed="true">중</button>
+                <button type="button" class="priority-btn" data-value="하" aria-pressed="false">하</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <span class="field-label">과제 유형</span>
+              <div class="type-segment" role="group" aria-label="과제 유형 선택">
+                <button type="button" class="type-btn" data-group-type="individual" aria-pressed="true">개인 과제</button>
+                <button type="button" class="type-btn" data-group-type="group" aria-pressed="false">조별 과제</button>
+              </div>
+            </div>
+
+            <div id="teamSection" class="team-section" hidden>
+              <div class="team-section-head">
+                <span class="field-label">역할 분담표</span>
+                <button type="button" id="addTeamMemberBtn" class="team-add-btn">+ 조원 추가</button>
+              </div>
+              <div id="teamRows" class="team-rows"></div>
+            </div>
+
+            <p id="formError" class="form-error" role="alert" aria-live="polite"></p>
+
+            <div class="form-actions">
+              <button type="button" id="cancelEditBtn" class="btn-cancel-edit" hidden>취소</button>
+              <button type="submit" id="submitBtn" class="btn-submit">과제 추가하기</button>
+            </div>
+          </form>
+        </aside>
+
+        <!-- Right Workspace -->
+        <section class="board-column" aria-label="과제 목록">
+          <div class="overview-bar">
+            <div>
+              <h1 class="overview-heading">다가오는 과제와 마감 일정</h1>
+              <p id="todayDateText" class="overview-sub tabular-nums"></p>
+            </div>
+
+            <div class="summary-metrics">
+              <div class="metric-item">
+                <span class="metric-label">진행 중</span>
+                <span id="statActive" class="metric-value tabular-nums">0</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">D-3 이내</span>
+                <span id="statUrgent" class="metric-value is-danger tabular-nums">0</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">완료됨</span>
+                <span id="statCompleted" class="metric-value tabular-nums">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <div class="toolbar-top">
+              <div class="status-tabs" role="tablist" aria-label="목록 탭">
+                <button type="button" class="status-tab is-active" role="tab" aria-selected="true" data-tab="week">이번주</button>
+                <button type="button" class="status-tab" role="tab" aria-selected="false" data-tab="all">전체</button>
+                <button type="button" class="status-tab" role="tab" aria-selected="false" data-tab="completed">완료</button>
+              </div>
+
+              <div class="search-wrap">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  type="search"
+                  id="searchInput"
+                  class="search-input"
+                  placeholder="과목명 또는 과제명 검색"
+                  aria-label="과목명 또는 과제명 검색"
+                />
+              </div>
+
+              <div class="toolbar-actions">
+                <button type="button" id="openSyllabusBtn" class="syllabus-trigger-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                  <span>강의계획서에서 가져오기</span>
+                </button>
+
+                <button type="button" id="exportCalendarBtn" class="syllabus-trigger-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                    <path d="M12 14v4m-2-2 2 2 2-2" />
+                  </svg>
+                  <span>캘린더로 내보내기</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="courseFilterRow" class="course-filter-row" role="group" aria-label="과목별 필터"></div>
+          </div>
+
+          <!-- Weekly Calendar View (Shown in 이번주 tab) -->
+          <section id="weeklyCalendarSection" class="weekly-calendar-section" aria-label="이번주 주간 달력">
+            <div class="weekly-calendar-header">
+              <div class="weekly-calendar-title-wrap">
+                <h2 class="weekly-calendar-title">이번 주 주간 달력</h2>
+                <span id="weeklyRangeLabel" class="weekly-calendar-range tabular-nums"></span>
+              </div>
+              <button type="button" id="resetDayFilterBtn" class="day-filter-reset" hidden>전체 요일 보기</button>
+            </div>
+            <div id="weeklyGrid" class="weekly-grid"></div>
+          </section>
+
+          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModalBackdrop" class="modal-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc" hidden>
+      <div class="modal-dialog">
+        <h2 id="deleteModalTitle" class="modal-title">과제를 삭제할까요?</h2>
+        <p id="deleteModalDesc" class="modal-desc"></p>
+        <div class="modal-actions">
+          <button type="button" id="cancelDeleteBtn" class="modal-btn-cancel">취소</button>
+          <button type="button" id="confirmDeleteBtn" class="modal-btn-danger">삭제하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Syllabus Import Modal -->
+    <div id="syllabusModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="syllabusModalTitle" hidden>
+      <div class="syllabus-dialog">
+        <div class="syllabus-dialog-head">
+          <h2 id="syllabusModalTitle" class="syllabus-dialog-title">강의계획서에서 가져오기</h2>
+          <button type="button" id="closeSyllabusBtn" class="syllabus-dialog-close" aria-label="강의계획서 가져오기 창 닫기">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="syllabus-dialog-body">
+          <p class="syllabus-helper-text">
+            강의계획서 <strong>PDF 또는 CSV 파일</strong>을 올리거나 일정 문장을 직접 붙여넣고
+            <strong>분석하기</strong>를 누르면 과목명·과제명·마감일을 자동으로 추출합니다. (연도가 없는 날짜는 올해로 처리됩니다.)
+          </p>
+
+          <div id="syllabusFileZone" class="syllabus-file-zone">
+            <div class="syllabus-file-info">
+              <span class="syllabus-file-title">PDF 또는 CSV 파일 업로드</span>
+              <span class="syllabus-file-sub">파일을 끌어다 놓거나 선택하세요 (최대 10MB)</span>
+            </div>
+            <div class="syllabus-file-actions">
+              <input
+                type="file"
+                id="syllabusFileInput"
+                accept=".pdf,.csv,application/pdf,text/csv,application/vnd.ms-excel"
+                hidden
+              />
+              <button type="button" id="pickSyllabusFileBtn" class="syllabus-file-btn">PDF / CSV 선택</button>
+            </div>
+          </div>
+
+          <div id="syllabusAttachedBar" class="syllabus-attached-bar" hidden>
+            <div class="syllabus-attached-meta">
+              <span id="syllabusAttachedName" class="syllabus-attached-name"></span>
+              <span id="syllabusAttachedSize" class="syllabus-attached-size tabular-nums"></span>
+            </div>
+            <button type="button" id="removeSyllabusFileBtn" class="icon-action-btn is-delete">파일 제거</button>
+          </div>
+
+          <textarea
+            id="syllabusTextarea"
+            class="syllabus-textarea"
+            placeholder="또는 강의계획서 일정 문장을 여기에 붙여넣으세요:&#10;[운영체제] 11/24 CPU 스케줄링 보고서 제출&#10;12월 2일 팀 프로젝트 발표 자료 업로드&#10;기말고사: 12.15"
+            aria-label="강의계획서 일정 텍스트"
+          ></textarea>
+
+          <div class="syllabus-input-controls">
+            <div class="syllabus-course-wrap">
+              <label for="syllabusDefaultCourse" class="field-label">기본 과목명 (문장에 과목명이 없을 때 적용)</label>
+              <input
+                type="text"
+                id="syllabusDefaultCourse"
+                class="field-input"
+                placeholder="예: 자료구조"
+                maxlength="40"
+                autocomplete="off"
+              />
+            </div>
+            <button type="button" id="analyzeSyllabusBtn" class="syllabus-analyze-btn">분석하기</button>
+          </div>
+
+          <p id="syllabusError" class="form-error" role="alert" aria-live="polite"></p>
+
+          <div id="syllabusPreviewSection" class="syllabus-preview-section" hidden>
+            <div class="syllabus-preview-head">
+              <h3 class="syllabus-preview-title">추출된 과제 목록</h3>
+              <span id="syllabusPreviewCount" class="syllabus-preview-sub tabular-nums"></span>
+            </div>
+            <div id="syllabusPreviewList" class="syllabus-preview-list"></div>
+          </div>
+        </div>
+
+        <div class="syllabus-dialog-foot">
+          <button type="button" id="cancelSyllabusBtn" class="modal-btn-cancel">닫기</button>
+          <button type="button" id="importAllSyllabusBtn" class="syllabus-import-btn" disabled>모두 추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Undo Toast -->
+    <div id="toastRegion" class="toast-region" role="status" aria-live="polite">
+      <div class="toast-box">
+        <span id="toastMessage">과제를 삭제했습니다.</span>
+        <button type="button" id="toastUndoBtn" class="toast-undo-btn">되돌리기</button>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        const STORAGE_KEY = 'campus_deadline_tasks_v1';
+        const PRIORITY_WEIGHT = { 상: 3, 중: 2, 하: 1 };
+        const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+        // High-contrast academic course palette (auto-assigned per course)
+        const COURSE_PALETTE = [
+          { ink: '#1D4ED8', soft: '#EFF6FF', border: '#BFDBFE' },
+          { ink: '#0F766E', soft: '#F0FDFA', border: '#99F6E4' },
+          { ink: '#6D28D9', soft: '#F5F3FF', border: '#DDD6FE' },
+          { ink: '#B45309', soft: '#FFFBEB', border: '#FDE68A' },
+          { ink: '#15803D', soft: '#F0FDF4', border: '#BBF7D0' },
+          { ink: '#BE123C', soft: '#FFF1F2', border: '#FECDD3' },
+          { ink: '#0369A1', soft: '#F0F9FF', border: '#BAE6FD' },
+          { ink: '#A21CAF', soft: '#FDF4FF', border: '#F5D0FE' }
+        ];
+
+        function toYmd(date) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return y + '-' + m + '-' + d;
+        }
+
+        function addDaysYmd(offset) {
+          const now = new Date();
+          const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+          return toYmd(target);
+        }
+
+        function parseLocalDate(ymd) {
+          if (!ymd || typeof ymd !== 'string') return null;
+          const parts = ymd.split('-');
+          if (parts.length !== 3) return null;
+          const y = Number(parts[0]);
+          const m = Number(parts[1]);
+          const d = Number(parts[2]);
+          if (!y || !m || !d) return null;
+          return new Date(y, m - 1, d);
+        }
+
+        function getTodayMidnight() {
+          const now = new Date();
+          return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        }
+
+        function getCurrentWeekDays() {
+          const today = getTodayMidnight();
+          const dow = today.getDay();
+          const mondayOffset = dow === 0 ? -6 : 1 - dow;
+          const days = [];
+          for (let i = 0; i < 7; i += 1) {
+            const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + mondayOffset + i);
+            days.push({
+              date: d,
+              ymd: toYmd(d),
+              weekday: WEEKDAYS[d.getDay()],
+              month: d.getMonth() + 1,
+              dayNum: d.getDate(),
+              isToday: toYmd(d) === toYmd(today)
+            });
+          }
+          return days;
+        }
+
+        function isDateInCurrentWeek(ymd) {
+          const days = getCurrentWeekDays();
+          const start = days[0].ymd;
+          const end = days[6].ymd;
+          return ymd >= start && ymd <= end;
+        }
+
+        function getDdayInfo(dueDateStr, completed) {
+          const due = parseLocalDate(dueDateStr);
+          const today = getTodayMidnight();
+          if (!due) {
+            return { diffDays: 999, label: '-', urgencyText: '', isUrgent: false };
+          }
+          const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+          let label = '';
+          let urgencyText = '';
+
+          if (diffDays === 0) {
+            label = 'D-Day';
+            urgencyText = '오늘 마감';
+          } else if (diffDays > 0) {
+            label = 'D-' + diffDays;
+            if (diffDays <= 3) urgencyText = '마감 임박';
+          } else {
+            label = 'D+' + Math.abs(diffDays);
+            urgencyText = '기한 지남';
+          }
+
+          return {
+            diffDays: diffDays,
+            label: label,
+            urgencyText: urgencyText,
+            isUrgent: !completed && diffDays <= 3
+          };
+        }
+
+        function formatDueDateDisplay(dueDateStr) {
+          const date = parseLocalDate(dueDateStr);
+          if (!date) return dueDateStr;
+          const m = date.getMonth() + 1;
+          const d = date.getDate();
+          const w = WEEKDAYS[date.getDay()];
+          return m + '월 ' + d + '일 (' + w + ')';
+        }
+
+        function hashCourseName(name) {
+          let hash = 0;
+          for (let i = 0; i < name.length; i += 1) {
+            hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+          }
+          return hash;
+        }
+
+        function buildCourseColorMap(taskList) {
+          const map = new Map();
+          const usedSlots = new Set();
+          const orderedCourses = [];
+
+          taskList
+            .slice()
+            .sort(function (a, b) {
+              return (a.createdAt || 0) - (b.createdAt || 0);
+            })
+            .forEach(function (t) {
+              const name = (t.course || '').trim();
+              if (name && orderedCourses.indexOf(name) === -1) {
+                orderedCourses.push(name);
+              }
+            });
+
+          orderedCourses.forEach(function (name) {
+            let slot = hashCourseName(name) % COURSE_PALETTE.length;
+            if (usedSlots.size < COURSE_PALETTE.length) {
+              while (usedSlots.has(slot)) {
+                slot = (slot + 1) % COURSE_PALETTE.length;
+              }
+              usedSlots.add(slot);
+            }
+            map.set(name, COURSE_PALETTE[slot]);
+          });
+
+          return map;
+        }
+
+        function createSeedTasks() {
+          const now = Date.now();
+          const weekDays = getCurrentWeekDays();
+          const todayYmd = toYmd(getTodayMidnight());
+          // Place tasks across this week and next week so all 3 tabs + weekly calendar are populated
+          const wedOrMid = weekDays[2].ymd >= todayYmd ? weekDays[2].ymd : addDaysYmd(1);
+          const friOrLate = weekDays[4].ymd >= todayYmd ? weekDays[4].ymd : addDaysYmd(2);
+          const sunYmd = weekDays[6].ymd;
+
+          return [
+            {
+              id: 'seed-1',
+              course: '운영체제',
+              title: '프로세스 스케줄링 시뮬레이터 구현',
+              dueDate: addDaysYmd(0),
+              priority: '상',
+              completed: false,
+              createdAt: now - 600000
+            },
+            {
+              id: 'seed-2',
+              course: '데이터베이스',
+              title: 'ER 다이어그램 정규화 과제 제출',
+              dueDate: wedOrMid,
+              priority: '상',
+              completed: false,
+              createdAt: now - 500000
+            },
+            {
+              id: 'seed-3',
+              course: '확률과 통계',
+              title: '5장 연습문제 풀이 스캔본 업로드',
+              dueDate: friOrLate,
+              priority: '중',
+              completed: false,
+              createdAt: now - 400000
+            },
+            {
+              id: 'seed-4',
+              course: '경영학개론',
+              title: '팀 프로젝트 기업 사례 조사 초안',
+              dueDate: sunYmd,
+              priority: '중',
+              isGroup: true,
+              teamMembers: [
+                { name: '김민수', role: '재무제표 · 시장 데이터 분석' },
+                { name: '이서연', role: '경쟁사 사례 조사 및 발표' },
+                { name: '박지훈', role: '보고서 편집 및 최종 제출' }
+              ],
+              completed: false,
+              createdAt: now - 300000
+            },
+            {
+              id: 'seed-5',
+              course: '영어발표와 토론',
+              title: '기말 프레젠테이션 개요서 작성',
+              dueDate: addDaysYmd(9),
+              priority: '하',
+              completed: false,
+              createdAt: now - 200000
+            },
+            {
+              id: 'seed-6',
+              course: '웹프로그래밍',
+              title: '시맨틱 HTML 포트폴리오 레이아웃',
+              dueDate: weekDays[0].ymd,
+              priority: '중',
+              completed: true,
+              createdAt: now - 700000
+            }
+          ];
+        }
+
+        function loadTasks() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw === null) {
+              const seeded = createSeedTasks();
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+              return seeded;
+            }
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(function (item) {
+              return item && typeof item.id === 'string' && typeof item.title === 'string';
+            });
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function saveTasks(list) {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          } catch (e) {
+            // Ignore storage quota errors gracefully
+          }
+        }
+
+        function sortTasks(list) {
+          return list.slice().sort(function (a, b) {
+            if (a.completed !== b.completed) {
+              return a.completed ? 1 : -1;
+            }
+            const dateA = parseLocalDate(a.dueDate);
+            const dateB = parseLocalDate(b.dueDate);
+            const timeA = dateA ? dateA.getTime() : Number.MAX_SAFE_INTEGER;
+            const timeB = dateB ? dateB.getTime() : Number.MAX_SAFE_INTEGER;
+            if (timeA !== timeB) {
+              return timeA - timeB;
+            }
+            const weightA = PRIORITY_WEIGHT[a.priority] || 1;
+            const weightB = PRIORITY_WEIGHT[b.priority] || 1;
+            if (weightA !== weightB) {
+              return weightB - weightA;
+            }
+            return (a.createdAt || 0) - (b.createdAt || 0);
+          });
+        }
+
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        // Application State
+        let tasks = loadTasks();
+        let activeTab = 'week'; // 'week' | 'all' | 'completed'
+        let activeCourseFilter = 'ALL';
+        let activeWeekDayFilter = ''; // '' or YYYY-MM-DD inside current week
+        let searchQuery = '';
+        let selectedPriority = '중';
+        let pendingDeleteId = null;
+        let lastDeletedTask = null;
+        let toastTimer = null;
+
+        // DOM References
+        const todayDateText = document.getElementById('todayDateText');
+        const statActive = document.getElementById('statActive');
+        const statUrgent = document.getElementById('statUrgent');
+        const statCompleted = document.getElementById('statCompleted');
+        const cardsGrid = document.getElementById('cardsGrid');
+        const courseFilterRow = document.getElementById('courseFilterRow');
+        const courseQuickRow = document.getElementById('courseQuickRow');
+        const searchInput = document.getElementById('searchInput');
+
+        const weeklyCalendarSection = document.getElementById('weeklyCalendarSection');
+        const weeklyRangeLabel = document.getElementById('weeklyRangeLabel');
+        const weeklyGrid = document.getElementById('weeklyGrid');
+        const resetDayFilterBtn = document.getElementById('resetDayFilterBtn');
+
+        const composerPanel = document.getElementById('composerPanel');
+        const composerBackdrop = document.getElementById('composerBackdrop');
+        const composerTitle = document.getElementById('composerTitle');
+        const openComposerBtn = document.getElementById('openComposerBtn');
+        const closeComposerBtn = document.getElementById('closeComposerBtn');
+
+        const taskForm = document.getElementById('taskForm');
+        const editingTaskIdInput = document.getElementById('editingTaskId');
+        const courseInput = document.getElementById('courseInput');
+        const titleInput = document.getElementById('titleInput');
+        const dueDateInput = document.getElementById('dueDateInput');
+        const formError = document.getElementById('formError');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const priorityButtons = Array.from(document.querySelectorAll('.priority-btn'));
+        const typeButtons = Array.from(document.querySelectorAll('.type-btn'));
+        const teamSection = document.getElementById('teamSection');
+        const teamRowsContainer = document.getElementById('teamRows');
+        const addTeamMemberBtn = document.getElementById('addTeamMemberBtn');
+        const quickDateButtons = Array.from(document.querySelectorAll('[data-offset-days]'));
+        const tabButtons = Array.from(document.querySelectorAll('[data-tab]'));
+        const navLinks = Array.from(document.querySelectorAll('[data-nav-tab]'));
+
+        const deleteModalBackdrop = document.getElementById('deleteModalBackdrop');
+        const deleteModalDesc = document.getElementById('deleteModalDesc');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        const toastRegion = document.getElementById('toastRegion');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastUndoBtn = document.getElementById('toastUndoBtn');
+
+        const openSyllabusBtn = document.getElementById('openSyllabusBtn');
+        const exportCalendarBtn = document.getElementById('exportCalendarBtn');
+        const syllabusModalBackdrop = document.getElementById('syllabusModalBackdrop');
+        const closeSyllabusBtn = document.getElementById('closeSyllabusBtn');
+        const cancelSyllabusBtn = document.getElementById('cancelSyllabusBtn');
+        const syllabusTextarea = document.getElementById('syllabusTextarea');
+        const syllabusDefaultCourse = document.getElementById('syllabusDefaultCourse');
+        const analyzeSyllabusBtn = document.getElementById('analyzeSyllabusBtn');
+        const syllabusError = document.getElementById('syllabusError');
+        const syllabusPreviewSection = document.getElementById('syllabusPreviewSection');
+        const syllabusPreviewCount = document.getElementById('syllabusPreviewCount');
+        const syllabusPreviewList = document.getElementById('syllabusPreviewList');
+        const importAllSyllabusBtn = document.getElementById('importAllSyllabusBtn');
+        const syllabusFileZone = document.getElementById('syllabusFileZone');
+        const syllabusFileInput = document.getElementById('syllabusFileInput');
+        const pickSyllabusFileBtn = document.getElementById('pickSyllabusFileBtn');
+        const syllabusAttachedBar = document.getElementById('syllabusAttachedBar');
+        const syllabusAttachedName = document.getElementById('syllabusAttachedName');
+        const syllabusAttachedSize = document.getElementById('syllabusAttachedSize');
+        const removeSyllabusFileBtn = document.getElementById('removeSyllabusFileBtn');
+
+        let extractedSyllabusItems = [];
+        let attachedPdfFile = null; // { name, mimeType, base64, size }
+        let isGroupTask = false;
+        let draftTeamMembers = [];
+
+        function initTodayHeader() {
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = now.getMonth() + 1;
+          const d = now.getDate();
+          const w = WEEKDAYS[now.getDay()];
+          todayDateText.textContent = y + '년 ' + m + '월 ' + d + '일 ' + w + '요일 기준 · 마감 가까운 순 자동 정렬';
+          if (!dueDateInput.value) {
+            dueDateInput.value = addDaysYmd(1);
+          }
+        }
+
+        function setPriority(val) {
+          selectedPriority = val;
+          priorityButtons.forEach(function (btn) {
+            btn.setAttribute('aria-pressed', btn.getAttribute('data-value') === val ? 'true' : 'false');
+          });
+        }
+
+        function renderTeamRows() {
+          teamRowsContainer.innerHTML = draftTeamMembers
+            .map(function (member, idx) {
+              return (
+                '<div class="team-row" data-team-idx="' +
+                idx +
+                '">' +
+                '  <input type="text" class="team-input" data-tfield="name" value="' +
+                escapeHtml(member.name) +
+                '" placeholder="조원 이름" maxlength="20" aria-label="조원 이름" />' +
+                '  <input type="text" class="team-input" data-tfield="role" value="' +
+                escapeHtml(member.role) +
+                '" placeholder="담당 역할 (예: 자료 조사)" maxlength="40" aria-label="담당 역할" />' +
+                '  <button type="button" class="team-remove-btn" data-taction="remove" aria-label="조원 행 삭제">' +
+                '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+                '  </button>' +
+                '</div>'
+              );
+            })
+            .join('');
+        }
+
+        function setGroupTaskMode(enabled, initialMembers) {
+          isGroupTask = Boolean(enabled);
+          typeButtons.forEach(function (btn) {
+            const isGroupBtn = btn.getAttribute('data-group-type') === 'group';
+            btn.setAttribute('aria-pressed', isGroupBtn === isGroupTask ? 'true' : 'false');
+          });
+          teamSection.hidden = !isGroupTask;
+
+          if (Array.isArray(initialMembers)) {
+            draftTeamMembers = initialMembers.map(function (m) {
+              return { name: m.name || '', role: m.role || '' };
+            });
+          } else if (isGroupTask && draftTeamMembers.length === 0) {
+            draftTeamMembers = [
+              { name: '', role: '' },
+              { name: '', role: '' }
+            ];
+          }
+          if (isGroupTask) {
+            renderTeamRows();
+          }
+        }
+
+        function openMobileComposer() {
+          composerPanel.classList.add('is-open');
+          composerBackdrop.classList.add('is-open');
+          document.body.style.overflow = 'hidden';
+          setTimeout(function () {
+            courseInput.focus();
+          }, 120);
+        }
+
+        function closeMobileComposer() {
+          composerPanel.classList.remove('is-open');
+          composerBackdrop.classList.remove('is-open');
+          document.body.style.overflow = '';
+        }
+
+        function resetFormToCreate() {
+          editingTaskIdInput.value = '';
+          composerTitle.textContent = '새 과제 · 일정 등록';
+          submitBtn.textContent = '과제 추가하기';
+          cancelEditBtn.hidden = true;
+          formError.textContent = '';
+          courseInput.value = '';
+          titleInput.value = '';
+          dueDateInput.value = addDaysYmd(1);
+          setPriority('중');
+          setGroupTaskMode(false, []);
+        }
+
+        function startEditTask(id) {
+          const task = tasks.find(function (t) {
+            return t.id === id;
+          });
+          if (!task) return;
+          editingTaskIdInput.value = task.id;
+          composerTitle.textContent = '과제 수정';
+          submitBtn.textContent = '수정 저장';
+          cancelEditBtn.hidden = false;
+          formError.textContent = '';
+          courseInput.value = task.course;
+          titleInput.value = task.title;
+          dueDateInput.value = task.dueDate;
+          setPriority(task.priority || '중');
+          setGroupTaskMode(Boolean(task.isGroup), Array.isArray(task.teamMembers) ? task.teamMembers : []);
+
+          if (window.innerWidth < 1024) {
+            openMobileComposer();
+          } else {
+            titleInput.focus();
+          }
+        }
+
+        function setActiveTab(tab) {
+          activeTab = tab;
+          if (tab !== 'week') {
+            activeWeekDayFilter = '';
+          }
+          tabButtons.forEach(function (btn) {
+            const isMatch = btn.getAttribute('data-tab') === tab;
+            btn.classList.toggle('is-active', isMatch);
+            btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+          });
+          navLinks.forEach(function (link) {
+            link.classList.toggle('is-active', link.getAttribute('data-nav-tab') === tab);
+          });
+          renderBoard();
+        }
+
+        function getUniqueCourses() {
+          const map = new Map();
+          tasks.forEach(function (t) {
+            const name = (t.course || '').trim();
+            if (!name) return;
+            map.set(name, (map.get(name) || 0) + (t.completed ? 0 : 1));
+          });
+          return Array.from(map.entries());
+        }
+
+        function renderCourseHelpers(colorMap) {
+          const courses = getUniqueCourses();
+
+          if (activeCourseFilter !== 'ALL') {
+            const exists = courses.some(function (entry) {
+              return entry[0] === activeCourseFilter;
+            });
+            if (!exists) {
+              activeCourseFilter = 'ALL';
+            }
+          }
+
+          let filterHtml =
+            '<button type="button" class="course-tab ' +
+            (activeCourseFilter === 'ALL' ? 'is-active' : '') +
+            '" data-course="ALL">전체 과목</button>';
+
+          courses.forEach(function (entry) {
+            const name = entry[0];
+            const activeCount = entry[1];
+            const isSelected = activeCourseFilter === name;
+            const palette = colorMap.get(name) || COURSE_PALETTE[0];
+            filterHtml +=
+              '<button type="button" class="course-tab ' +
+              (isSelected ? 'is-active' : '') +
+              '" style="--course-ink:' +
+              palette.ink +
+              '; color:' +
+              palette.ink +
+              ';" data-course="' +
+              escapeHtml(name) +
+              '">' +
+              escapeHtml(name) +
+              (activeCount > 0 ? ' · ' + activeCount : '') +
+              '</button>';
+          });
+          courseFilterRow.innerHTML = filterHtml;
+
+          if (courses.length === 0) {
+            courseQuickRow.innerHTML = '';
+            return;
+          }
+          courseQuickRow.innerHTML = courses
+            .slice(0, 7)
+            .map(function (entry) {
+              const name = entry[0];
+              const palette = colorMap.get(name) || COURSE_PALETTE[0];
+              return (
+                '<button type="button" class="quick-btn" style="color:' +
+                palette.ink +
+                '; background-color:' +
+                palette.soft +
+                ';" data-fill-course="' +
+                escapeHtml(name) +
+                '">' +
+                escapeHtml(name) +
+                '</button>'
+              );
+            })
+            .join('');
+        }
+
+        function renderSummaryMetrics() {
+          let activeCount = 0;
+          let urgentCount = 0;
+          let completedCount = 0;
+
+          tasks.forEach(function (t) {
+            if (t.completed) {
+              completedCount += 1;
+            } else {
+              activeCount += 1;
+              if (getDdayInfo(t.dueDate, false).isUrgent) {
+                urgentCount += 1;
+              }
+            }
+          });
+
+          statActive.textContent = String(activeCount);
+          statUrgent.textContent = String(urgentCount);
+          statCompleted.textContent = String(completedCount);
+        }
+
+        function renderWeeklyCalendar(colorMap) {
+          const isWeekTab = activeTab === 'week';
+          weeklyCalendarSection.hidden = !isWeekTab;
+          if (!isWeekTab) return;
+
+          const weekDays = getCurrentWeekDays();
+          const firstDay = weekDays[0];
+          const lastDay = weekDays[6];
+          weeklyRangeLabel.textContent =
+            firstDay.month + '월 ' + firstDay.dayNum + '일(월) – ' + lastDay.month + '월 ' + lastDay.dayNum + '일(일)';
+
+          resetDayFilterBtn.hidden = !activeWeekDayFilter;
+
+          const query = searchQuery.trim().toLowerCase();
+          const sorted = sortTasks(tasks).filter(function (t) {
+            if (activeCourseFilter !== 'ALL' && t.course !== activeCourseFilter) return false;
+            if (query) {
+              const hay = (t.course + ' ' + t.title).toLowerCase();
+              if (hay.indexOf(query) === -1) return false;
+            }
+            return true;
+          });
+
+          weeklyGrid.innerHTML = weekDays
+            .map(function (day) {
+              const dayTasks = sorted.filter(function (t) {
+                return t.dueDate === day.ymd;
+              });
+              const activeDayCount = dayTasks.filter(function (t) {
+                return !t.completed;
+              }).length;
+
+              const cellClasses = ['week-day-cell'];
+              if (day.isToday) cellClasses.push('is-today');
+              if (activeWeekDayFilter === day.ymd) cellClasses.push('is-selected');
+
+              const countText =
+                dayTasks.length === 0
+                  ? '0건'
+                  : activeDayCount > 0
+                    ? activeDayCount + '건'
+                    : '완료 ' + dayTasks.length;
+
+              const eventsHtml =
+                dayTasks.length === 0
+                  ? '<span class="week-day-empty">마감 없음</span>'
+                  : dayTasks
+                      .map(function (t) {
+                        const palette = colorMap.get(t.course) || COURSE_PALETTE[0];
+                        const dday = getDdayInfo(t.dueDate, t.completed);
+                        const urgentInk = dday.isUrgent ? '#DC2626' : palette.ink;
+                        const styleVars =
+                          '--course-ink:' +
+                          urgentInk +
+                          '; --course-soft:' +
+                          (dday.isUrgent ? '#FEF2F2' : palette.soft) +
+                          '; --course-border:' +
+                          (dday.isUrgent ? '#FCA5A5' : palette.border) +
+                          ';';
+
+                        return (
+                          '<button type="button" class="week-event-btn ' +
+                          (t.completed ? 'is-completed' : '') +
+                          '" style="' +
+                          styleVars +
+                          '" data-week-task-id="' +
+                          escapeHtml(t.id) +
+                          '" title="' +
+                          escapeHtml(t.course + ' - ' + t.title) +
+                          '">' +
+                          '  <span class="week-event-course">' +
+                          escapeHtml(t.course) +
+                          '</span>' +
+                          '  <span class="week-event-title">' +
+                          escapeHtml(t.title) +
+                          '</span>' +
+                          '</button>'
+                        );
+                      })
+                      .join('');
+
+              return (
+                '<div class="' +
+                cellClasses.join(' ') +
+                '">' +
+                '  <button type="button" class="week-day-head" data-week-day="' +
+                day.ymd +
+                '" aria-pressed="' +
+                (activeWeekDayFilter === day.ymd ? 'true' : 'false') +
+                '">' +
+                '    <span class="week-day-label tabular-nums">' +
+                day.weekday +
+                ' ' +
+                day.dayNum +
+                '일' +
+                (day.isToday ? ' (오늘)' : '') +
+                '</span>' +
+                '    <span class="week-day-count tabular-nums">' +
+                countText +
+                '</span>' +
+                '  </button>' +
+                '  <div class="week-day-events">' +
+                eventsHtml +
+                '  </div>' +
+                '</div>'
+              );
+            })
+            .join('');
+        }
+
+        function createCardHtml(task, colorMap) {
+          const dday = getDdayInfo(task.dueDate, task.completed);
+          const palette = colorMap.get(task.course) || COURSE_PALETTE[0];
+          const cardClasses = ['task-card'];
+          if (task.completed) {
+            cardClasses.push('is-completed');
+          } else if (dday.isUrgent) {
+            cardClasses.push('is-urgent');
+          }
+
+          const ddayText = task.completed
+            ? '완료됨'
+            : dday.urgencyText
+              ? dday.label + ' · ' + dday.urgencyText
+              : dday.label;
+
+          const ddayClass = task.completed
+            ? 'card-dday is-completed'
+            : dday.isUrgent
+              ? 'card-dday is-urgent tabular-nums'
+              : 'card-dday tabular-nums';
+
+          const checkIcon = task.completed
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+            : '';
+
+          const teamMembers = Array.isArray(task.teamMembers) ? task.teamMembers : [];
+          const groupKickerHtml = task.isGroup
+            ? '      <span aria-hidden="true">·</span>' +
+              '      <span>조별 과제' +
+              (teamMembers.length > 0 ? ' (' + teamMembers.length + '명)' : '') +
+              '</span>'
+            : '';
+
+          const teamSectionHtml =
+            task.isGroup && teamMembers.length > 0
+              ? '  <div class="card-team-section">' +
+                '    <span class="card-team-label">역할 분담표</span>' +
+                '    <div class="card-team-list">' +
+                teamMembers
+                  .map(function (m) {
+                    return (
+                      '<div class="card-team-row">' +
+                      '  <span class="card-team-member">' +
+                      escapeHtml(m.name || '미정') +
+                      '</span>' +
+                      '  <span class="card-team-role">' +
+                      escapeHtml(m.role || '역할 미입력') +
+                      '</span>' +
+                      '</div>'
+                    );
+                  })
+                  .join('') +
+                '    </div>' +
+                '  </div>'
+              : '';
+
+          return (
+            '<article class="' +
+            cardClasses.join(' ') +
+            '" style="--course-ink:' +
+            palette.ink +
+            ';" data-task-id="' +
+            escapeHtml(task.id) +
+            '">' +
+            '  <div class="card-top-meta">' +
+            '    <div class="card-kicker">' +
+            '      <span class="card-course">' +
+            escapeHtml(task.course) +
+            '</span>' +
+            '      <span aria-hidden="true">·</span>' +
+            '      <span class="card-priority" data-priority="' +
+            escapeHtml(task.priority) +
+            '">중요도 ' +
+            escapeHtml(task.priority) +
+            '</span>' +
+            groupKickerHtml +
+            '    </div>' +
+            '    <span class="' +
+            ddayClass +
+            '">' +
+            escapeHtml(ddayText) +
+            '</span>' +
+            '  </div>' +
+            '  <div class="card-main">' +
+            '    <button type="button" class="check-btn" data-action="toggle" aria-label="' +
+            escapeHtml(task.title) +
+            (task.completed ? ' 완료 해제' : ' 완료 체크') +
+            '" aria-pressed="' +
+            (task.completed ? 'true' : 'false') +
+            '">' +
+            '      <span class="check-box">' +
+            checkIcon +
+            '</span>' +
+            '    </button>' +
+            '    <div class="card-title-wrap">' +
+            '      <h3 class="card-title">' +
+            escapeHtml(task.title) +
+            '</h3>' +
+            '    </div>' +
+            '  </div>' +
+            teamSectionHtml +
+            '  <div class="card-footer">' +
+            '    <span class="card-due-text tabular-nums">마감 ' +
+            escapeHtml(formatDueDateDisplay(task.dueDate)) +
+            '</span>' +
+            '    <div class="card-actions">' +
+            '      <button type="button" class="icon-action-btn" data-action="edit" aria-label="' +
+            escapeHtml(task.title) +
+            ' 수정">수정</button>' +
+            '      <button type="button" class="icon-action-btn is-delete" data-action="delete" aria-label="' +
+            escapeHtml(task.title) +
+            ' 삭제">삭제</button>' +
+            '    </div>' +
+            '  </div>' +
+            '</article>'
+          );
+        }
+
+        function renderBoard() {
+          const colorMap = buildCourseColorMap(tasks);
+          renderSummaryMetrics();
+          renderCourseHelpers(colorMap);
+          renderWeeklyCalendar(colorMap);
+
+          const sorted = sortTasks(tasks);
+          const query = searchQuery.trim().toLowerCase();
+
+          const filtered = sorted.filter(function (task) {
+            if (activeCourseFilter !== 'ALL' && task.course !== activeCourseFilter) {
+              return false;
+            }
+            if (activeTab === 'week') {
+              if (!isDateInCurrentWeek(task.dueDate)) return false;
+              if (activeWeekDayFilter && task.dueDate !== activeWeekDayFilter) return false;
+            } else if (activeTab === 'completed') {
+              if (!task.completed) return false;
+            }
+            if (query) {
+              const hay = (task.course + ' ' + task.title).toLowerCase();
+              if (hay.indexOf(query) === -1) return false;
+            }
+            return true;
+          });
+
+          if (filtered.length === 0) {
+            const hasFilters =
+              activeCourseFilter !== 'ALL' ||
+              Boolean(searchQuery.trim()) ||
+              Boolean(activeWeekDayFilter);
+
+            let emptyTitle = '등록된 과제나 일정이 없습니다';
+            let emptyDesc = '이번 학기 과목과 마감일을 등록하면 D-day 순으로 자동 정렬됩니다.';
+
+            if (activeTab === 'completed' && !hasFilters) {
+              emptyTitle = '완료된 과제가 아직 없습니다';
+              emptyDesc = '과제 카드의 체크 버튼을 눌러 완료 처리하면 이곳에 모입니다.';
+            } else if (activeTab === 'week' && !hasFilters) {
+              emptyTitle = '이번 주 마감 과제가 없습니다';
+              emptyDesc = '전체 탭에서 다음 주 일정을 확인하거나 새 과제를 등록해 보세요.';
+            } else if (hasFilters) {
+              emptyTitle = '조건에 맞는 과제가 없습니다';
+              emptyDesc = '선택한 요일·과목 필터나 검색어를 초기화하면 다른 과제를 볼 수 있습니다.';
+            }
+
+            cardsGrid.innerHTML =
+              '<div class="empty-state" style="grid-column: 1 / -1;">' +
+              '  <p class="empty-title">' +
+              emptyTitle +
+              '</p>' +
+              '  <p class="empty-desc">' +
+              emptyDesc +
+              '</p>' +
+              (hasFilters
+                ? '<button type="button" id="resetFiltersBtn" class="btn-cancel-edit">필터 초기화</button>'
+                : activeTab === 'week'
+                  ? '<button type="button" id="switchToAllBtn" class="btn-cancel-edit">전체 과제 보기</button>'
+                  : '<button type="button" id="emptyAddBtn" class="header-cta">새 과제 등록하기</button>') +
+              '</div>';
+
+            const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+            if (resetFiltersBtn) {
+              resetFiltersBtn.addEventListener('click', function () {
+                activeCourseFilter = 'ALL';
+                activeWeekDayFilter = '';
+                searchQuery = '';
+                searchInput.value = '';
+                renderBoard();
+              });
+            }
+
+            const switchToAllBtn = document.getElementById('switchToAllBtn');
+            if (switchToAllBtn) {
+              switchToAllBtn.addEventListener('click', function () {
+                setActiveTab('all');
+              });
+            }
+
+            const emptyAddBtn = document.getElementById('emptyAddBtn');
+            if (emptyAddBtn) {
+              emptyAddBtn.addEventListener('click', function () {
+                if (window.innerWidth < 1024) {
+                  openMobileComposer();
+                } else {
+                  courseInput.focus();
+                }
+              });
+            }
+            return;
+          }
+
+          if (activeTab === 'all' || activeTab === 'week') {
+            const activeList = filtered.filter(function (t) {
+              return !t.completed;
+            });
+            const completedList = filtered.filter(function (t) {
+              return t.completed;
+            });
+
+            let html = activeList
+              .map(function (t) {
+                return createCardHtml(t, colorMap);
+              })
+              .join('');
+
+            if (completedList.length > 0) {
+              html +=
+                '<div class="section-divider">' +
+                '  <span class="section-divider-title tabular-nums">완료된 과제 · ' +
+                completedList.length +
+                '건</span>' +
+                '  <button type="button" id="clearCompletedBtn" class="clear-completed-btn">완료 항목 모두 비우기</button>' +
+                '</div>' +
+                completedList
+                  .map(function (t) {
+                    return createCardHtml(t, colorMap);
+                  })
+                  .join('');
+            }
+            cardsGrid.innerHTML = html;
+
+            const clearBtn = document.getElementById('clearCompletedBtn');
+            if (clearBtn) {
+              clearBtn.addEventListener('click', function () {
+                openDeleteModal('CLEAR_COMPLETED');
+              });
+            }
+          } else {
+            // 'completed' tab
+            let html =
+              '<div class="section-divider">' +
+              '  <span class="section-divider-title tabular-nums">완료된 과제 · ' +
+              filtered.length +
+              '건</span>' +
+              '  <button type="button" id="clearCompletedBtn" class="clear-completed-btn">완료 항목 모두 비우기</button>' +
+              '</div>' +
+              filtered
+                .map(function (t) {
+                  return createCardHtml(t, colorMap);
+                })
+                .join('');
+            cardsGrid.innerHTML = html;
+
+            const clearBtn = document.getElementById('clearCompletedBtn');
+            if (clearBtn) {
+              clearBtn.addEventListener('click', function () {
+                openDeleteModal('CLEAR_COMPLETED');
+              });
+            }
+          }
+        }
+
+        function openDeleteModal(targetId) {
+          pendingDeleteId = targetId;
+          if (targetId === 'CLEAR_COMPLETED') {
+            const count = tasks.filter(function (t) {
+              return t.completed;
+            }).length;
+            deleteModalDesc.innerHTML =
+              '완료 처리된 과제 <span class="modal-target-name tabular-nums">' +
+              count +
+              '건</span>을 모두 삭제할까요? 삭제 후에는 되돌릴 수 없습니다.';
+          } else {
+            const task = tasks.find(function (t) {
+              return t.id === targetId;
+            });
+            if (!task) return;
+            deleteModalDesc.innerHTML =
+              '<span class="modal-target-name">[' +
+              escapeHtml(task.course) +
+              '] ' +
+              escapeHtml(task.title) +
+              '</span> 과제를 목록에서 삭제하시겠습니까?';
+          }
+          deleteModalBackdrop.hidden = false;
+          requestAnimationFrame(function () {
+            deleteModalBackdrop.classList.add('is-open');
+            cancelDeleteBtn.focus();
+          });
+        }
+
+        function closeDeleteModal() {
+          pendingDeleteId = null;
+          deleteModalBackdrop.classList.remove('is-open');
+          setTimeout(function () {
+            if (!deleteModalBackdrop.classList.contains('is-open')) {
+              deleteModalBackdrop.hidden = true;
+            }
+          }, 180);
+        }
+
+        function showUndoToast(deletedTask) {
+          lastDeletedTask = deletedTask;
+          toastMessage.textContent = '"' + deletedTask.title + '" 삭제됨';
+          toastUndoBtn.hidden = false;
+          toastRegion.classList.add('is-visible');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastRegion.classList.remove('is-visible');
+            lastDeletedTask = null;
+          }, 5000);
+        }
+
+        // Event Listeners
+        openComposerBtn.addEventListener('click', function () {
+          resetFormToCreate();
+          if (window.innerWidth < 1024) {
+            openMobileComposer();
+          } else {
+            courseInput.focus();
+          }
+        });
+
+        closeComposerBtn.addEventListener('click', closeMobileComposer);
+        composerBackdrop.addEventListener('click', closeMobileComposer);
+
+        cancelEditBtn.addEventListener('click', function () {
+          resetFormToCreate();
+          if (window.innerWidth < 1024) {
+            closeMobileComposer();
+          }
+        });
+
+        priorityButtons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setPriority(btn.getAttribute('data-value'));
+          });
+        });
+
+        typeButtons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setGroupTaskMode(btn.getAttribute('data-group-type') === 'group');
+          });
+        });
+
+        addTeamMemberBtn.addEventListener('click', function () {
+          draftTeamMembers.push({ name: '', role: '' });
+          renderTeamRows();
+          const rows = teamRowsContainer.querySelectorAll('.team-row');
+          const lastRow = rows[rows.length - 1];
+          if (lastRow) {
+            const nameInput = lastRow.querySelector('[data-tfield="name"]');
+            if (nameInput) nameInput.focus();
+          }
+        });
+
+        teamRowsContainer.addEventListener('input', function (e) {
+          const row = e.target.closest('[data-team-idx]');
+          if (!row) return;
+          const idx = Number(row.getAttribute('data-team-idx'));
+          const field = e.target.getAttribute('data-tfield');
+          if (!field || !draftTeamMembers[idx]) return;
+          draftTeamMembers[idx][field] = e.target.value;
+        });
+
+        teamRowsContainer.addEventListener('click', function (e) {
+          const removeBtn = e.target.closest('[data-taction="remove"]');
+          if (!removeBtn) return;
+          const row = removeBtn.closest('[data-team-idx]');
+          if (!row) return;
+          const idx = Number(row.getAttribute('data-team-idx'));
+          draftTeamMembers.splice(idx, 1);
+          renderTeamRows();
+        });
+
+        quickDateButtons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const offset = Number(btn.getAttribute('data-offset-days'));
+            dueDateInput.value = addDaysYmd(offset);
+          });
+        });
+
+        courseQuickRow.addEventListener('click', function (e) {
+          const btn = e.target.closest('[data-fill-course]');
+          if (!btn) return;
+          courseInput.value = btn.getAttribute('data-fill-course');
+          titleInput.focus();
+        });
+
+        taskForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          const course = courseInput.value.trim();
+          const title = titleInput.value.trim();
+          const dueDate = dueDateInput.value;
+
+          if (!course) {
+            formError.textContent = '과목명을 입력해 주세요.';
+            courseInput.focus();
+            return;
+          }
+          if (!title) {
+            formError.textContent = '과제명 또는 일정을 입력해 주세요.';
+            titleInput.focus();
+            return;
+          }
+          if (!dueDate || !parseLocalDate(dueDate)) {
+            formError.textContent = '올바른 마감일을 선택해 주세요.';
+            dueDateInput.focus();
+            return;
+          }
+
+          const cleanTeamMembers = isGroupTask
+            ? draftTeamMembers
+                .map(function (m) {
+                  return { name: (m.name || '').trim(), role: (m.role || '').trim() };
+                })
+                .filter(function (m) {
+                  return m.name.length > 0 || m.role.length > 0;
+                })
+            : [];
+
+          formError.textContent = '';
+          const editingId = editingTaskIdInput.value;
+
+          if (editingId) {
+            tasks = tasks.map(function (t) {
+              if (t.id !== editingId) return t;
+              return Object.assign({}, t, {
+                course: course,
+                title: title,
+                dueDate: dueDate,
+                priority: selectedPriority,
+                isGroup: isGroupTask,
+                teamMembers: cleanTeamMembers
+              });
+            });
+          } else {
+            const newTask = {
+              id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+              course: course,
+              title: title,
+              dueDate: dueDate,
+              priority: selectedPriority,
+              isGroup: isGroupTask,
+              teamMembers: cleanTeamMembers,
+              completed: false,
+              createdAt: Date.now()
+            };
+            tasks.push(newTask);
+          }
+
+          // If user is on 이번주 tab and adds/edits a task outside this week, switch to 전체 so it's immediately visible
+          if (activeTab === 'week' && !isDateInCurrentWeek(dueDate)) {
+            activeTab = 'all';
+            activeWeekDayFilter = '';
+            tabButtons.forEach(function (btn) {
+              const isMatch = btn.getAttribute('data-tab') === 'all';
+              btn.classList.toggle('is-active', isMatch);
+              btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+            });
+            navLinks.forEach(function (link) {
+              link.classList.toggle('is-active', link.getAttribute('data-nav-tab') === 'all');
+            });
+          } else if (activeTab === 'completed' && !editingId) {
+            activeTab = 'all';
+            tabButtons.forEach(function (btn) {
+              const isMatch = btn.getAttribute('data-tab') === 'all';
+              btn.classList.toggle('is-active', isMatch);
+              btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+            });
+            navLinks.forEach(function (link) {
+              link.classList.toggle('is-active', link.getAttribute('data-nav-tab') === 'all');
+            });
+          }
+
+          saveTasks(tasks);
+          resetFormToCreate();
+          if (window.innerWidth < 1024) {
+            closeMobileComposer();
+          }
+          renderBoard();
+        });
+
+        tabButtons.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setActiveTab(btn.getAttribute('data-tab'));
+          });
+        });
+
+        navLinks.forEach(function (link) {
+          link.addEventListener('click', function () {
+            setActiveTab(link.getAttribute('data-nav-tab'));
+          });
+        });
+
+        courseFilterRow.addEventListener('click', function (e) {
+          const btn = e.target.closest('[data-course]');
+          if (!btn) return;
+          activeCourseFilter = btn.getAttribute('data-course');
+          renderBoard();
+        });
+
+        resetDayFilterBtn.addEventListener('click', function () {
+          activeWeekDayFilter = '';
+          renderBoard();
+        });
+
+        weeklyGrid.addEventListener('click', function (e) {
+          const dayBtn = e.target.closest('[data-week-day]');
+          if (dayBtn) {
+            const ymd = dayBtn.getAttribute('data-week-day');
+            activeWeekDayFilter = activeWeekDayFilter === ymd ? '' : ymd;
+            renderBoard();
+            return;
+          }
+
+          const eventBtn = e.target.closest('[data-week-task-id]');
+          if (eventBtn) {
+            const taskId = eventBtn.getAttribute('data-week-task-id');
+            const targetCard = cardsGrid.querySelector('[data-task-id="' + CSS.escape(taskId) + '"]');
+            if (targetCard) {
+              targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+              startEditTask(taskId);
+            }
+          }
+        });
+
+        searchInput.addEventListener('input', function () {
+          searchQuery = searchInput.value;
+          renderBoard();
+        });
+
+        cardsGrid.addEventListener('click', function (e) {
+          const actionBtn = e.target.closest('[data-action]');
+          if (!actionBtn) return;
+          const card = actionBtn.closest('[data-task-id]');
+          if (!card) return;
+          const id = card.getAttribute('data-task-id');
+          const action = actionBtn.getAttribute('data-action');
+
+          if (action === 'toggle') {
+            tasks = tasks.map(function (t) {
+              if (t.id !== id) return t;
+              return Object.assign({}, t, { completed: !t.completed });
+            });
+            saveTasks(tasks);
+            renderBoard();
+          } else if (action === 'edit') {
+            startEditTask(id);
+          } else if (action === 'delete') {
+            openDeleteModal(id);
+          }
+        });
+
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        deleteModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === deleteModalBackdrop) {
+            closeDeleteModal();
+          }
+        });
+
+        confirmDeleteBtn.addEventListener('click', function () {
+          if (!pendingDeleteId) return;
+          if (pendingDeleteId === 'CLEAR_COMPLETED') {
+            tasks = tasks.filter(function (t) {
+              return !t.completed;
+            });
+            saveTasks(tasks);
+            closeDeleteModal();
+            renderBoard();
+            return;
+          }
+
+          const target = tasks.find(function (t) {
+            return t.id === pendingDeleteId;
+          });
+          if (target) {
+            tasks = tasks.filter(function (t) {
+              return t.id !== pendingDeleteId;
+            });
+            if (editingTaskIdInput.value === pendingDeleteId) {
+              resetFormToCreate();
+            }
+            saveTasks(tasks);
+            closeDeleteModal();
+            renderBoard();
+            showUndoToast(target);
+          } else {
+            closeDeleteModal();
+          }
+        });
+
+        toastUndoBtn.addEventListener('click', function () {
+          if (!lastDeletedTask) return;
+          tasks.push(lastDeletedTask);
+          lastDeletedTask = null;
+          if (toastTimer) clearTimeout(toastTimer);
+          toastRegion.classList.remove('is-visible');
+          saveTasks(tasks);
+          renderBoard();
+        });
+
+        function openSyllabusModal() {
+          syllabusError.textContent = '';
+          syllabusModalBackdrop.hidden = false;
+          requestAnimationFrame(function () {
+            syllabusModalBackdrop.classList.add('is-open');
+            syllabusTextarea.focus();
+          });
+        }
+
+        function closeSyllabusModal() {
+          syllabusModalBackdrop.classList.remove('is-open');
+          setTimeout(function () {
+            if (!syllabusModalBackdrop.classList.contains('is-open')) {
+              syllabusModalBackdrop.hidden = true;
+            }
+          }, 180);
+        }
+
+        function updateSyllabusImportButtonState() {
+          const checkedCount = extractedSyllabusItems.filter(function (item) {
+            return item.selected;
+          }).length;
+          importAllSyllabusBtn.disabled = checkedCount === 0;
+          importAllSyllabusBtn.textContent = checkedCount > 0 ? '모두 추가 (' + checkedCount + '건)' : '모두 추가';
+          syllabusPreviewCount.textContent = '총 ' + extractedSyllabusItems.length + '건 중 ' + checkedCount + '건 선택됨';
+        }
+
+        function renderSyllabusPreview() {
+          if (extractedSyllabusItems.length === 0) {
+            syllabusPreviewSection.hidden = true;
+            syllabusPreviewList.innerHTML = '';
+            importAllSyllabusBtn.disabled = true;
+            importAllSyllabusBtn.textContent = '모두 추가';
+            return;
+          }
+
+          syllabusPreviewSection.hidden = false;
+          syllabusPreviewList.innerHTML = extractedSyllabusItems
+            .map(function (item, idx) {
+              return (
+                '<div class="syllabus-item-row" data-syllabus-idx="' +
+                idx +
+                '">' +
+                '  <input type="checkbox" class="syllabus-item-check" data-sfield="selected" ' +
+                (item.selected ? 'checked' : '') +
+                ' aria-label="항목 선택" />' +
+                '  <div class="syllabus-item-fields">' +
+                '    <input type="text" class="syllabus-mini-input" data-sfield="course" value="' +
+                escapeHtml(item.course) +
+                '" placeholder="과목명" aria-label="과목명" />' +
+                '    <input type="text" class="syllabus-mini-input" data-sfield="title" value="' +
+                escapeHtml(item.title) +
+                '" placeholder="과제명" aria-label="과제명" />' +
+                '    <input type="date" class="syllabus-mini-input tabular-nums" data-sfield="dueDate" value="' +
+                escapeHtml(item.dueDate) +
+                '" aria-label="마감일" />' +
+                '    <select class="syllabus-mini-select" data-sfield="priority" aria-label="중요도">' +
+                '      <option value="상"' +
+                (item.priority === '상' ? ' selected' : '') +
+                '>상</option>' +
+                '      <option value="중"' +
+                (item.priority === '중' ? ' selected' : '') +
+                '>중</option>' +
+                '      <option value="하"' +
+                (item.priority === '하' ? ' selected' : '') +
+                '>하</option>' +
+                '    </select>' +
+                '  </div>' +
+                '  <button type="button" class="icon-action-btn is-delete" data-saction="remove" aria-label="추출 항목 제외">제외</button>' +
+                '</div>'
+              );
+            })
+            .join('');
+
+          updateSyllabusImportButtonState();
+        }
+
+        function formatFileSize(bytes) {
+          if (bytes < 1024) return bytes + 'B';
+          if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + 'KB';
+          return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+        }
+
+        function clearAttachedSyllabusFile(clearCsvText) {
+          attachedPdfFile = null;
+          syllabusFileInput.value = '';
+          syllabusAttachedBar.hidden = true;
+          syllabusAttachedName.textContent = '';
+          syllabusAttachedSize.textContent = '';
+          if (clearCsvText) {
+            syllabusTextarea.value = '';
+          }
+        }
+
+        function readFileAsBase64(file) {
+          return new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () {
+              const result = typeof reader.result === 'string' ? reader.result : '';
+              const commaIndex = result.indexOf(',');
+              resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+            };
+            reader.onerror = function () {
+              reject(new Error('파일을 읽을 수 없습니다.'));
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        async function readCsvFileText(file) {
+          const buffer = await file.arrayBuffer();
+          try {
+            return new TextDecoder('utf-8', { fatal: true }).decode(buffer).replace(/^\uFEFF/, '');
+          } catch (e) {
+            try {
+              return new TextDecoder('euc-kr').decode(buffer);
+            } catch (e2) {
+              return new TextDecoder('utf-8').decode(buffer);
+            }
+          }
+        }
+
+        async function handleSelectedSyllabusFile(file) {
+          if (!file) return;
+          syllabusError.textContent = '';
+
+          const lowerName = (file.name || '').toLowerCase();
+          const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+          const isCsv =
+            file.type === 'text/csv' ||
+            file.type === 'application/vnd.ms-excel' ||
+            lowerName.endsWith('.csv');
+
+          if (!isPdf && !isCsv) {
+            syllabusError.textContent = 'PDF(.pdf) 또는 CSV(.csv) 파일만 선택할 수 있습니다.';
+            syllabusFileInput.value = '';
+            return;
+          }
+
+          if (file.size > 10 * 1024 * 1024) {
+            syllabusError.textContent = '파일 크기가 너무 큽니다. 10MB 이하의 파일을 선택해 주세요.';
+            syllabusFileInput.value = '';
+            return;
+          }
+
+          try {
+            if (isPdf) {
+              const base64 = await readFileAsBase64(file);
+              attachedPdfFile = {
+                name: file.name,
+                mimeType: 'application/pdf',
+                base64: base64,
+                size: file.size
+              };
+              syllabusAttachedName.textContent = file.name + ' (PDF)';
+              syllabusAttachedSize.textContent = formatFileSize(file.size);
+              syllabusAttachedBar.hidden = false;
+            } else {
+              const csvText = await readCsvFileText(file);
+              attachedPdfFile = null;
+              syllabusTextarea.value = csvText;
+              syllabusAttachedName.textContent = file.name + ' (CSV · 아래 입력창에 불러옴)';
+              syllabusAttachedSize.textContent = formatFileSize(file.size);
+              syllabusAttachedBar.hidden = false;
+            }
+          } catch (err) {
+            syllabusError.textContent = '파일을 읽는 중 오류가 발생했습니다.';
+          }
+        }
+
+        pickSyllabusFileBtn.addEventListener('click', function () {
+          syllabusFileInput.click();
+        });
+
+        syllabusFileInput.addEventListener('change', function () {
+          const file = syllabusFileInput.files && syllabusFileInput.files[0];
+          if (file) {
+            handleSelectedSyllabusFile(file);
+          }
+        });
+
+        removeSyllabusFileBtn.addEventListener('click', function () {
+          const wasCsv = !attachedPdfFile && !syllabusAttachedBar.hidden;
+          clearAttachedSyllabusFile(wasCsv);
+        });
+
+        syllabusFileZone.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          syllabusFileZone.classList.add('is-dragover');
+        });
+
+        syllabusFileZone.addEventListener('dragleave', function () {
+          syllabusFileZone.classList.remove('is-dragover');
+        });
+
+        syllabusFileZone.addEventListener('drop', function (e) {
+          e.preventDefault();
+          syllabusFileZone.classList.remove('is-dragover');
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) {
+            handleSelectedSyllabusFile(file);
+          }
+        });
+
+        openSyllabusBtn.addEventListener('click', openSyllabusModal);
+        closeSyllabusBtn.addEventListener('click', closeSyllabusModal);
+        cancelSyllabusBtn.addEventListener('click', closeSyllabusModal);
+        syllabusModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === syllabusModalBackdrop) {
+            closeSyllabusModal();
+          }
+        });
+
+        analyzeSyllabusBtn.addEventListener('click', async function () {
+          const text = syllabusTextarea.value.trim();
+          const defaultCourse = syllabusDefaultCourse.value.trim();
+
+          if (!text && !attachedPdfFile) {
+            syllabusError.textContent = 'PDF/CSV 파일을 선택하거나 강의계획서 문장을 붙여넣어 주세요.';
+            syllabusTextarea.focus();
+            return;
+          }
+
+          syllabusError.textContent = '';
+          analyzeSyllabusBtn.disabled = true;
+          analyzeSyllabusBtn.textContent = '분석 중...';
+
+          try {
+            const payload = {
+              text: text,
+              defaultCourse: defaultCourse,
+              currentYear: new Date().getFullYear()
+            };
+            if (attachedPdfFile) {
+              payload.file = {
+                name: attachedPdfFile.name,
+                mimeType: attachedPdfFile.mimeType,
+                base64: attachedPdfFile.base64
+              };
+            }
+
+            const response = await fetch('/api/syllabus/parse', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+              syllabusError.textContent = data.error || '분석 중 오류가 발생했습니다.';
+              return;
+            }
+
+            const list = Array.isArray(data.assignments) ? data.assignments : [];
+            if (list.length === 0) {
+              extractedSyllabusItems = [];
+              renderSyllabusPreview();
+              syllabusError.textContent = '마감일이 포함된 과제를 찾지 못했습니다. 문서나 문장에 날짜와 과제 내용이 포함되었는지 확인해 주세요.';
+              return;
+            }
+
+            extractedSyllabusItems = list.map(function (item) {
+              return {
+                selected: true,
+                course: (item.course || defaultCourse || '').trim(),
+                title: (item.title || '').trim(),
+                dueDate: item.dueDate || '',
+                priority: item.priority || '중'
+              };
+            });
+            renderSyllabusPreview();
+          } catch (err) {
+            syllabusError.textContent = '서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+          } finally {
+            analyzeSyllabusBtn.disabled = false;
+            analyzeSyllabusBtn.textContent = '분석하기';
+          }
+        });
+
+        syllabusPreviewList.addEventListener('input', function (e) {
+          const row = e.target.closest('[data-syllabus-idx]');
+          if (!row) return;
+          const idx = Number(row.getAttribute('data-syllabus-idx'));
+          const field = e.target.getAttribute('data-sfield');
+          if (!field || !extractedSyllabusItems[idx]) return;
+
+          if (field === 'selected') {
+            extractedSyllabusItems[idx].selected = Boolean(e.target.checked);
+            updateSyllabusImportButtonState();
+          } else {
+            extractedSyllabusItems[idx][field] = e.target.value;
+          }
+        });
+
+        syllabusPreviewList.addEventListener('change', function (e) {
+          const row = e.target.closest('[data-syllabus-idx]');
+          if (!row) return;
+          const idx = Number(row.getAttribute('data-syllabus-idx'));
+          const field = e.target.getAttribute('data-sfield');
+          if (!field || !extractedSyllabusItems[idx]) return;
+
+          if (field === 'selected') {
+            extractedSyllabusItems[idx].selected = Boolean(e.target.checked);
+            updateSyllabusImportButtonState();
+          } else {
+            extractedSyllabusItems[idx][field] = e.target.value;
+          }
+        });
+
+        syllabusPreviewList.addEventListener('click', function (e) {
+          const removeBtn = e.target.closest('[data-saction="remove"]');
+          if (!removeBtn) return;
+          const row = removeBtn.closest('[data-syllabus-idx]');
+          if (!row) return;
+          const idx = Number(row.getAttribute('data-syllabus-idx'));
+          extractedSyllabusItems.splice(idx, 1);
+          renderSyllabusPreview();
+        });
+
+        importAllSyllabusBtn.addEventListener('click', function () {
+          const selectedItems = extractedSyllabusItems.filter(function (item) {
+            return item.selected;
+          });
+
+          if (selectedItems.length === 0) return;
+
+          for (let i = 0; i < selectedItems.length; i += 1) {
+            const item = selectedItems[i];
+            if (!item.course.trim()) {
+              syllabusError.textContent = '과목명이 비어 있는 항목이 있습니다. 과목명을 입력한 뒤 추가해 주세요.';
+              return;
+            }
+            if (!item.title.trim()) {
+              syllabusError.textContent = '과제명이 비어 있는 항목이 있습니다. 과제명을 입력한 뒤 추가해 주세요.';
+              return;
+            }
+            if (!item.dueDate || !parseLocalDate(item.dueDate)) {
+              syllabusError.textContent = '올바르지 않은 마감일이 있습니다. 날짜를 확인해 주세요.';
+              return;
+            }
+          }
+
+          syllabusError.textContent = '';
+          const now = Date.now();
+          let hasOutsideWeek = false;
+
+          selectedItems.forEach(function (item, idx) {
+            const dueDate = item.dueDate.trim();
+            if (!isDateInCurrentWeek(dueDate)) {
+              hasOutsideWeek = true;
+            }
+            tasks.push({
+              id: 'task-' + (now + idx) + '-' + Math.random().toString(36).slice(2, 7),
+              course: item.course.trim(),
+              title: item.title.trim(),
+              dueDate: dueDate,
+              priority: item.priority || '중',
+              completed: false,
+              createdAt: now + idx
+            });
+          });
+
+          saveTasks(tasks);
+          extractedSyllabusItems = [];
+          clearAttachedSyllabusFile(true);
+          syllabusDefaultCourse.value = '';
+          renderSyllabusPreview();
+          closeSyllabusModal();
+
+          if (activeTab === 'completed' || (activeTab === 'week' && hasOutsideWeek)) {
+            setActiveTab('all');
+          } else {
+            renderBoard();
+          }
+
+          lastDeletedTask = null;
+          toastMessage.textContent = selectedItems.length + '건의 과제를 등록했습니다.';
+          toastUndoBtn.hidden = true;
+          toastRegion.classList.add('is-visible');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastRegion.classList.remove('is-visible');
+            toastUndoBtn.hidden = false;
+          }, 4000);
+        });
+
+        function escapeIcsText(value) {
+          return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/\r\n|\r|\n/g, '\\n')
+            .replace(/;/g, '\\;')
+            .replace(/,/g, '\\,');
+        }
+
+        function formatIcsDateCompact(date) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return y + m + d;
+        }
+
+        function formatIcsUtcStamp(date) {
+          const y = date.getUTCFullYear();
+          const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(date.getUTCDate()).padStart(2, '0');
+          const hh = String(date.getUTCHours()).padStart(2, '0');
+          const mm = String(date.getUTCMinutes()).padStart(2, '0');
+          const ss = String(date.getUTCSeconds()).padStart(2, '0');
+          return y + m + d + 'T' + hh + mm + ss + 'Z';
+        }
+
+        function showInfoToast(message) {
+          lastDeletedTask = null;
+          toastMessage.textContent = message;
+          toastUndoBtn.hidden = true;
+          toastRegion.classList.add('is-visible');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastRegion.classList.remove('is-visible');
+            toastUndoBtn.hidden = false;
+          }, 4000);
+        }
+
+        exportCalendarBtn.addEventListener('click', function () {
+          const activeTasks = sortTasks(tasks).filter(function (t) {
+            return !t.completed && parseLocalDate(t.dueDate);
+          });
+
+          if (activeTasks.length === 0) {
+            showInfoToast('내보낼 진행 중인 과제가 없습니다.');
+            return;
+          }
+
+          const nowStamp = formatIcsUtcStamp(new Date());
+          const lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Campus Deadline Planner//KR',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'X-WR-CALNAME:캠퍼스 과제 마감 일정'
+          ];
+
+          activeTasks.forEach(function (t) {
+            const startDate = parseLocalDate(t.dueDate);
+            const endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 1);
+            const summary = '[' + t.course + '] ' + t.title;
+
+            const descParts = ['중요도: ' + (t.priority || '중')];
+            if (t.isGroup && Array.isArray(t.teamMembers) && t.teamMembers.length > 0) {
+              descParts.push('역할 분담표:');
+              t.teamMembers.forEach(function (m) {
+                descParts.push('- ' + (m.name || '미정') + ': ' + (m.role || '역할 미입력'));
+              });
+            }
+
+            lines.push('BEGIN:VEVENT');
+            lines.push('UID:' + escapeIcsText(t.id + '@campus-deadline-planner'));
+            lines.push('DTSTAMP:' + nowStamp);
+            lines.push('DTSTART;VALUE=DATE:' + formatIcsDateCompact(startDate));
+            lines.push('DTEND;VALUE=DATE:' + formatIcsDateCompact(endDate));
+            lines.push('SUMMARY:' + escapeIcsText(summary));
+            lines.push('DESCRIPTION:' + escapeIcsText(descParts.join('\n')));
+            lines.push('BEGIN:VALARM');
+            lines.push('ACTION:DISPLAY');
+            lines.push('DESCRIPTION:' + escapeIcsText(summary + ' 마감 하루 전입니다.'));
+            lines.push('TRIGGER:-P1D');
+            lines.push('END:VALARM');
+            lines.push('END:VEVENT');
+          });
+
+          lines.push('END:VCALENDAR');
+
+          const icsContent = lines.join('\r\n') + '\r\n';
+          const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'campus-deadlines.ics';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 1000);
+
+          showInfoToast('진행 중인 과제 ' + activeTasks.length + '건을 .ics 파일로 내보냈습니다.');
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            if (!syllabusModalBackdrop.hidden) {
+              closeSyllabusModal();
+            } else if (!deleteModalBackdrop.hidden) {
+              closeDeleteModal();
+            } else if (composerPanel.classList.contains('is-open')) {
+              closeMobileComposer();
+            }
+          }
+        });
+
+        // Boot
+        initTodayHeader();
+        renderBoard();
+      })();
+    </script>
+  </body>
+</html>
